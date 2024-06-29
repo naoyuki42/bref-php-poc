@@ -5,6 +5,14 @@ provider:
     region: ap-northeast-1
     profile: default
     stage: dev
+    iam:
+      role:
+        statements:
+          - Effect: "Allow"
+            Action:
+              - "s3:GetObject"
+              - "s3:PutObject"
+            Resource: "arn:aws:s3:::bref-php-sample/*"
 
 plugins:
   - ./vendor/bref/bref
@@ -19,6 +27,8 @@ functions:
               bucket: bref-php-sample
               existing: true
               event: s3:ObjectCreated:*
+              rules:
+                - prefix: uploads/
 
 package:
   patterns:
