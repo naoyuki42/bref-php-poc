@@ -3,17 +3,22 @@ service: app
 provider:
     name: aws
     region: ap-northeast-1
+    profile: default
+    stage: dev
 
 plugins:
   - ./vendor/bref/bref
 
 functions:
     web:
-        handler: public/index.php
+        handler: index.php
         runtime: php-82-fpm
         timeout: 28
         events:
-            - httpApi: '*'
+          - s3:
+              bucket: bref-php-sample
+              existing: true
+              event: s3:ObjectCreated:*
 
 package:
   patterns:
