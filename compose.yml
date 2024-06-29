@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  bref-php:
+    container_name: bref-php
+    build:
+      context: ./
+      args:
+        - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+        - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    volumes:
+      - ./app:/var/app
+    working_dir: /var/app
+    tty: true
