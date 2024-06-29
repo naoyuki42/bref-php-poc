@@ -12,7 +12,7 @@ plugins:
 functions:
     web:
         handler: index.php
-        runtime: php-82-fpm
+        runtime: php-82
         timeout: 28
         events:
           - s3:
@@ -22,8 +22,4 @@ functions:
 
 package:
   patterns:
-    - '!node_modules/**'
-    - '!public/storage'
-    - '!resources/assets/**'
-    - '!storage/**'
     - '!tests/**'
