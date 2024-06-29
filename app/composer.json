@@ -1,7 +1,9 @@
 {
     "require": {
         "bref/bref": "^2.1",
-        "bref/logger": "^1.0"
+        "bref/logger": "^1.0",
+        "zbateson/mail-mime-parser": "^3.0",
+        "aws/aws-sdk-php": "^3.315"
     }
     ,
     "require-dev": {
