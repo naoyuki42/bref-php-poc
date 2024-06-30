@@ -12,7 +12,9 @@ provider:
             Action:
               - "s3:GetObject"
               - "s3:PutObject"
-            Resource: "arn:aws:s3:::bref-php-sample/*"
+            Resource:
+             - "arn:aws:s3:::bref-php-sample/*"
+             - "arn:aws:s3:::bref-php-ses-sample/*"
 
 plugins:
   - ./vendor/bref/bref
@@ -24,11 +26,9 @@ functions:
         timeout: 28
         events:
           - s3:
-              bucket: bref-php-sample
+              bucket: bref-php-ses-sample
               existing: true
               event: s3:ObjectCreated:*
-              rules:
-                - prefix: uploads/
 
 package:
   patterns:

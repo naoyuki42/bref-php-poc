@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Aws\Result;
 use Aws\S3\S3Client;
 use Bref\Context\Context;
 use Bref\Event\InvalidLambdaEvent;
 use Bref\Event\S3\S3Event;
 use Bref\Event\S3\S3Handler;
 use Bref\Logger\StderrLogger;
+use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use ZBateson\MailMimeParser\MailMimeParser;
@@ -23,12 +23,12 @@ class Handler extends S3Handler
     /**
      * @var string
      */
-    private const BUCKET_NAME = 'bref-php-sample';
+    private const RECEIPT_EMAIL_BUCKET_NAME = 'bref-php-ses-sample';
 
     /**
      * @var string
      */
-    private const BUCKET_KEY_PREFIX = 'convert/';
+    private const PUT_FILE_BUCKET_NAME = 'bref-php-sample';
 
     /**
      * @var LoggerInterface
@@ -65,45 +65,55 @@ class Handler extends S3Handler
      */
     public function handleS3(S3Event $event, Context $context): void
     {
-        $this->parseMail($event);
+        $this->logger->info('=== START ===');
 
-//        $result = $this->getFileObject($event);
-//
-//        $this->s3Client->putObject([
-//            'Bucket' => self::BUCKET_NAME,
-//            'Key'    => self::BUCKET_KEY_PREFIX . basename($event->getRecords()[0]->getObject()->getKey()),
-//            'Body'   => $result->get('Body'),
-//        ]);
+        $mail = $this->getMailObject($event);
+
+        $this->logger->info('succeed: get mail object');
+
+        $file = $this->retrieveMailAttachedFile($mail);
+
+        if ($file === null) {
+            return;
+        }
+
+        $this->logger->info('succeed: retrieve mail attached file');
+
+        $this->putFile(
+            $event->getRecords()[0]->getObject()->getKey(),
+            $file
+        );
+
+        $this->logger->info('succeed: put file');
+
+        $this->logger->info('=== END ===');
     }
 
     /**
      * @param S3Event $event
      *
-     * @return Result
+     * @return StreamInterface
      *
      * @throws InvalidLambdaEvent
      */
-    private function getFileObject(S3Event $event): Result
+    private function getMailObject(S3Event $event): StreamInterface
     {
         $record = $event->getRecords()[0];
 
         return $this->s3Client->getObject([
-            'Bucket' => self::BUCKET_NAME,
+            'Bucket' => self::RECEIPT_EMAIL_BUCKET_NAME,
             'Key'    => $record->getObject()->getKey(),
-        ]);
+        ])->get('Body');
     }
 
     /**
-     * @param S3Event $event
+     * @param StreamInterface $file
      *
-     * @return void
-     *
-     * @throws InvalidLambdaEvent
+     * @return StreamInterface|null
      */
-    private function parseMail(S3Event $event): void
+    private function retrieveMailAttachedFile(StreamInterface $file): ?StreamInterface
     {
-        $mail    = $event->getRecords()[0]->getObject();
-        $message = $this->mailParser->parse($mail, false);
+        $message = $this->mailParser->parse($file, false);
 
         for ($i = 0; $i < $message->getAttachmentCount(); $i++) {
             $part = $message->getAttachmentPart($i);
@@ -112,8 +122,25 @@ class Handler extends S3Handler
                 continue;
             }
 
-            $this->logger->info($part->getContent());
+            return $part->getContentStream();
         }
+
+        return null;
+    }
+
+    /**
+     * @param string $fileName
+     * @param StreamInterface $file
+     *
+     * @return void
+     */
+    private function putFile(string $fileName, StreamInterface $file): void
+    {
+        $this->s3Client->putObject([
+            'Bucket' => self::PUT_FILE_BUCKET_NAME,
+            'Key'    => $fileName,
+            'Body'   => $file,
+        ]);
     }
 }
 
