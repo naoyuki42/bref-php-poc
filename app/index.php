@@ -16,9 +16,26 @@ use Psr\Log\LogLevel;
 use ZBateson\MailMimeParser\MailMimeParser;
 
 /**
+ * 添付ファイルの情報を保持するDTO
+ */
+final readonly class AttachedFileDto
+{
+    /**
+     * @param string $fileName
+     * @param string $contentType
+     * @param StreamInterface $content
+     */
+    public function __construct(
+        public string $fileName,
+        public string $contentType,
+        public StreamInterface $content
+    ) {}
+}
+
+/**
  * S3のEventハンドラー
  */
-class Handler extends S3Handler
+final class Handler extends S3Handler
 {
     /**
      * @var string
@@ -79,10 +96,7 @@ class Handler extends S3Handler
 
         $this->logger->info('succeed: retrieve mail attached file');
 
-        $this->putFile(
-            $event->getRecords()[0]->getObject()->getKey(),
-            $file
-        );
+        $this->putFile($file);
 
         $this->logger->info('succeed: put file');
 
@@ -109,9 +123,9 @@ class Handler extends S3Handler
     /**
      * @param StreamInterface $file
      *
-     * @return StreamInterface|null
+     * @return AttachedFileDto|null
      */
-    private function retrieveMailAttachedFile(StreamInterface $file): ?StreamInterface
+    private function retrieveMailAttachedFile(StreamInterface $file): ?AttachedFileDto
     {
         $message = $this->mailParser->parse($file, false);
 
@@ -122,24 +136,28 @@ class Handler extends S3Handler
                 continue;
             }
 
-            return $part->getContentStream();
+            return new AttachedFileDto(
+                $part->getFileName(),
+                $part->getContentType(),
+                $part->getContentStream()
+            );
         }
 
         return null;
     }
 
     /**
-     * @param string $fileName
-     * @param StreamInterface $file
+     * @param AttachedFileDto $file
      *
      * @return void
      */
-    private function putFile(string $fileName, StreamInterface $file): void
+    private function putFile(AttachedFileDto $file): void
     {
         $this->s3Client->putObject([
-            'Bucket' => self::PUT_FILE_BUCKET_NAME,
-            'Key'    => $fileName,
-            'Body'   => $file,
+            'Bucket'      => self::PUT_FILE_BUCKET_NAME,
+            'Key'         => $file->fileName,
+            'contentType' => $file->contentType,
+            'Body'        => (string) $file->content,
         ]);
     }
 }
