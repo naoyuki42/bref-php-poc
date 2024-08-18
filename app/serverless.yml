@@ -1,34 +1,16 @@
-service: app
+service: app-${opt:stage, 'dev'}
 
 provider:
   name: aws
   region: ap-northeast-1
-  profile: default
-  stage: ${opt:stage, 'dev'}
-
-custom:
-  dev:
-    S3_BUCKET: dev-bref-bucket
-  stg:
-    S3_BUCKET: stg-bref-bucket
-  prod:
-    S3_BUCKET: prod-bref-bucket
 
 plugins:
   - ./vendor/bref/bref
 
 functions:
-  web:
+  s3-event:
     handler: index.php
     runtime: php-82
-    timeout: 28
-    environment:
-      S3_BUCKET: ${self:custom}
-    events:
-      - s3:
-          bucket: bref-php-ses-sample
-          existing: true
-          event: s3:ObjectCreated:*
 
 package:
   patterns:
