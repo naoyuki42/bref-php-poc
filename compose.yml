@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   bref-php:
+    platform: linux/x86_64
     container_name: bref-php
     build:
       context: ./
